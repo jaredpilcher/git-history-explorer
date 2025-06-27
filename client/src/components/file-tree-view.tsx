@@ -77,11 +77,7 @@ export function FileTreeView({ tree, onFileSelect, selectedFile }: FileTreeViewP
       }
     };
 
-    const flashVariant = {
-      flash: { 
-        backgroundColor: "rgba(234, 179, 8, 0.3)", 
-        transition: { duration: 0.1, repeat: 3, repeatType: "reverse" as const } 
-      },
+    const backgroundVariant = {
       normal: { 
         backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.2)' : 'rgba(0, 0, 0, 0)' 
       }
@@ -101,8 +97,8 @@ export function FileTreeView({ tree, onFileSelect, selectedFile }: FileTreeViewP
             isSelected ? 'bg-primary/10 text-primary' : ''
           }`}
           style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }}
-          variants={flashVariant}
-          animate={node.status === 'modified' ? "flash" : "normal"}
+          variants={backgroundVariant}
+          animate="normal"
         >
           {isFolder ? (
             <Folder 

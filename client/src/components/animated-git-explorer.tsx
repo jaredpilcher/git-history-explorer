@@ -40,6 +40,7 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
   const [speed, setSpeed] = useState(1);
   const [isLargeRepository, setIsLargeRepository] = useState(false);
   const [fileContent, setFileContent] = useState({ before: '', after: '' });
+  const [contentCache, setContentCache] = useState(new Map<string, { before: string; after: string }>());
   const speeds = [0.5, 1, 2, 4];
   
   // Performance optimization: Limit commits for large repositories
@@ -47,9 +48,17 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
   
   const { theme, setTheme } = useTheme();
 
-  // Mutation for fetching specific file content
+  // Mutation for fetching specific file content with caching
   const fileContentMutation = useMutation({
     mutationFn: async ({ filePath, fromCommit, toCommit }: { filePath: string; fromCommit?: string; toCommit?: string }) => {
+      // Create cache key
+      const cacheKey = `${filePath}-${fromCommit}-${toCommit}`;
+      
+      // Check cache first
+      if (contentCache.has(cacheKey)) {
+        return contentCache.get(cacheKey)!;
+      }
+      
       const response = await fetch('/api/file-content', {
         method: 'POST',
         headers: {
@@ -67,7 +76,12 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
         throw new Error('Failed to fetch file content');
       }
       
-      return await response.json();
+      const data = await response.json();
+      
+      // Cache the result
+      setContentCache(cache => new Map(cache.set(cacheKey, data)));
+      
+      return data;
     },
     onSuccess: (data: { before: string; after: string }) => {
       setFileContent(data);
@@ -104,18 +118,22 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
         toCommit
       });
     }
-  }, [fromCommit, toCommit, fileContentMutation]);
+  }, [fromCommit, toCommit]);
 
-  // Update file content when commit range changes
+  // Update file content when commit range changes (only when not playing)
   useEffect(() => {
-    if (selectedFile && fromCommit && toCommit) {
-      fileContentMutation.mutate({
-        filePath: selectedFile,
-        fromCommit,
-        toCommit
-      });
+    if (selectedFile && fromCommit && toCommit && !isPlaying) {
+      const timeoutId = setTimeout(() => {
+        fileContentMutation.mutate({
+          filePath: selectedFile,
+          fromCommit,
+          toCommit
+        });
+      }, 300); // Debounce to prevent rapid API calls
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [fromCommit, toCommit, selectedFile, fileContentMutation]);
+  }, [fromCommit, toCommit, selectedFile, isPlaying]);
 
   const { commitsInRange, fromIndex, displayCommits } = useMemo(() => {
     if (!data?.commits) return { commitsInRange: [], fromIndex: -1, displayCommits: [] };
