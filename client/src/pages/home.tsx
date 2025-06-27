@@ -1,0 +1,142 @@
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { GitBranch, Loader2, Github } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { GitExplorer } from "@/components/git-explorer";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import type { GitAnalysisResponse } from "@/lib/git-types";
+import { useToast } from "@/hooks/use-toast";
+
+export default function Home() {
+  const [repoUrl, setRepoUrl] = useState("https://github.com/facebook/react");
+  const [analysisData, setAnalysisData] = useState<GitAnalysisResponse | null>(null);
+  const { toast } = useToast();
+
+  const analysisMutation = useMutation({
+    mutationFn: async (url: string) => {
+      const response = await apiRequest("POST", "/api/analyze", { repoUrl: url });
+      return response.json() as Promise<GitAnalysisResponse>;
+    },
+    onSuccess: (data) => {
+      setAnalysisData(data);
+      toast({
+        title: "Repository analyzed",
+        description: `Successfully analyzed ${data.commits.length} commits`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Analysis failed",
+        description: error.message || "Failed to analyze repository",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAnalyze = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!repoUrl.trim()) return;
+    analysisMutation.mutate(repoUrl);
+  };
+
+  const handleReset = () => {
+    setAnalysisData(null);
+    setRepoUrl("https://github.com/facebook/react");
+  };
+
+  if (analysisData) {
+    return <GitExplorer data={analysisData} repoUrl={repoUrl} onReset={handleReset} />;
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800">
+      <motion.div
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="max-w-2xl w-full"
+      >
+        <div className="mb-8">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <GitBranch className="mx-auto text-6xl text-primary mb-4 h-16 w-16" />
+          </motion.div>
+          
+          <motion.h1
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="text-5xl md:text-6xl font-bold text-slate-800 dark:text-white mb-4"
+          >
+            Animated Git Change Explorer
+          </motion.h1>
+          
+          <motion.p
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="text-xl text-slate-600 dark:text-slate-400 mb-8"
+          >
+            Visualize code evolution and repository changes like never before
+          </motion.p>
+        </div>
+
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+        >
+          <Card className="w-full max-w-xl mx-auto">
+            <CardContent className="p-6">
+              <form onSubmit={handleAnalyze} className="space-y-4">
+                <div className="relative">
+                  <Github className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    type="url"
+                    placeholder="https://github.com/username/repository"
+                    value={repoUrl}
+                    onChange={(e) => setRepoUrl(e.target.value)}
+                    className="pl-10"
+                    required
+                    disabled={analysisMutation.isPending}
+                  />
+                </div>
+                
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={analysisMutation.isPending || !repoUrl.trim()}
+                >
+                  {analysisMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Analyzing Repository...
+                    </>
+                  ) : (
+                    <>
+                      <GitBranch className="mr-2 h-4 w-4" />
+                      Analyze Repository
+                    </>
+                  )}
+                </Button>
+              </form>
+              
+              <div className="flex items-center justify-center text-sm text-slate-500 dark:text-slate-400 mt-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span>Enter a public GitHub repository URL to begin analysis</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
+    </div>
+  );
+}
