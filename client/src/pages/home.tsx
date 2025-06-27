@@ -117,33 +117,44 @@ export default function Home() {
           <Card className="w-full max-w-xl mx-auto">
             <CardContent className="p-4 sm:p-6">
               <form onSubmit={handleAnalyze} className="space-y-4">
-                <div className="relative">
-                  <Github className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    type="url"
-                    placeholder="https://github.com/username/repository"
-                    value={repoUrl}
-                    onChange={(e) => setRepoUrl(e.target.value)}
-                    className="pl-10 text-sm sm:text-base"
-                    required
-                    disabled={analysisMutation.isPending}
-                  />
+                <div className="space-y-2">
+                  <label htmlFor="repo-url" className="sr-only">
+                    Repository URL
+                  </label>
+                  <div className="relative">
+                    <Github className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" aria-hidden="true" />
+                    <Input
+                      id="repo-url"
+                      type="url"
+                      placeholder="https://github.com/username/repository"
+                      value={repoUrl}
+                      onChange={(e) => setRepoUrl(e.target.value)}
+                      className="pl-10 text-sm sm:text-base"
+                      required
+                      disabled={analysisMutation.isPending}
+                      aria-describedby="repo-url-help"
+                    />
+                  </div>
+                  <div id="repo-url-help" className="text-xs text-muted-foreground text-center">
+                    Enter a public GitHub repository URL to analyze its commit history
+                  </div>
                 </div>
                 
                 <Button 
                   type="submit" 
                   className="w-full h-11 text-sm sm:text-base"
                   disabled={analysisMutation.isPending || !repoUrl.trim()}
+                  aria-describedby={analysisMutation.isPending ? "analysis-status" : undefined}
                 >
                   {analysisMutation.isPending ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      <span className="hidden sm:inline">Analyzing Repository...</span>
-                      <span className="sm:hidden">Analyzing...</span>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                      <span id="analysis-status" className="hidden sm:inline">Analyzing Repository...</span>
+                      <span className="sm:hidden" aria-hidden="true">Analyzing...</span>
                     </>
                   ) : (
                     <>
-                      <GitBranch className="mr-2 h-4 w-4" />
+                      <GitBranch className="mr-2 h-4 w-4" aria-hidden="true" />
                       <span className="hidden sm:inline">Analyze Repository</span>
                       <span className="sm:hidden">Analyze</span>
                     </>

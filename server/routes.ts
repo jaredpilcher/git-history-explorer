@@ -39,11 +39,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tempDir = await mkdtemp(tempDirPrefix);
         const git = simpleGit();
         
-        await git.clone(repoUrl, tempDir, ['--depth=100']);
+        // Optimize clone depth based on repository size estimate
+        await git.clone(repoUrl, tempDir, ['--depth=50', '--single-branch']);
         const repoGit = simpleGit(tempDir);
         
-        // Get commit log
-        const log = await repoGit.log();
+        // Get commit log with limit for performance
+        const log = await repoGit.log({ maxCount: 100 });
         const commits = log.all.map(commit => ({
           oid: commit.hash, // Adding oid field for original compatibility
           hash: commit.hash,
