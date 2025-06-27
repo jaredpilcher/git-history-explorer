@@ -155,8 +155,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }
 
-        // Generate real architecture analysis
-        const fileTreeHistory = await generateFileTreeHistory(repoGit, commits);
+        // Generate real architecture analysis  
+        const fileTreeHistory = await generatePerCommitChanges(repoGit, commits);
         const architectureNotes = generateArchitectureNotes(commits);
         const architectureDiagrams = generateArchitectureDiagrams(commits);
         const realFileContents = await getFileContents(repoGit, fromCommit, toCommit);
@@ -418,21 +418,43 @@ function buildChangedFilesTree(changedFiles: string[], changeInfo: any[]): FileT
   return root;
 }
 
-// Generate file tree history for each commit
-async function generateFileTreeHistory(repoGit: any, commits: any[]): Promise<FileTreeNode[]> {
-  const fileTreeHistory: FileTreeNode[] = [];
+// Generate per-commit changes showing only files modified in each commit
+async function generatePerCommitChanges(repoGit: any, commits: any[]): Promise<FileTreeNode[]> {
+  const commitChanges: FileTreeNode[] = [];
   
-  for (const commit of commits.slice(0, 10)) { // Limit to first 10 commits for performance
+  for (let i = 0; i < commits.length; i++) {
+    const currentCommit = commits[i];
+    const previousCommit = commits[i + 1]; // Previous in chronological order
+    
     try {
-      const lsTree = await repoGit.raw(['ls-tree', '-r', '--name-only', commit.hash]);
-      const files = lsTree.trim().split('\n').filter((f: string) => f);
+      let changedFiles: any[] = [];
       
-      const tree = buildFileTree(files, []);
-      fileTreeHistory.push(tree);
+      if (previousCommit) {
+        // Get diff between previous and current commit
+        const diffSummary = await repoGit.diffSummary([previousCommit.hash, currentCommit.hash]);
+        changedFiles = diffSummary.files || [];
+      } else {
+        // For the first commit, get all files as "added"
+        const files = await repoGit.raw(['ls-tree', '-r', '--name-only', currentCommit.hash]);
+        changedFiles = files.split('\n').filter(f => f.trim()).map(file => ({
+          file,
+          insertions: 1,
+          deletions: 0,
+          changes: 1
+        }));
+      }
+      
+      // Build file tree for this commit showing only changed files
+      const commitFileTree = buildChangedFilesTree(
+        changedFiles.map(f => f.file), 
+        changedFiles
+      );
+      
+      commitChanges.push(commitFileTree);
     } catch (error) {
-      // If we can't get tree for this commit, use previous or empty
-      const lastTree = fileTreeHistory[fileTreeHistory.length - 1];
-      fileTreeHistory.push(lastTree || {
+      console.warn(`Could not analyze commit ${currentCommit.hash}:`, error);
+      // Add empty file tree for failed commits
+      commitChanges.push({
         name: 'root',
         type: 'folder',
         path: '/',
@@ -441,7 +463,7 @@ async function generateFileTreeHistory(repoGit: any, commits: any[]): Promise<Fi
     }
   }
   
-  return fileTreeHistory;
+  return commitChanges;
 }
 
 // Generate architecture notes based on commit messages and file changes

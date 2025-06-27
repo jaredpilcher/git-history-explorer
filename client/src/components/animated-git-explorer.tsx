@@ -41,6 +41,8 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
   const [isLargeRepository, setIsLargeRepository] = useState(false);
   const [fileContent, setFileContent] = useState({ before: '', after: '' });
   const [contentCache, setContentCache] = useState(new Map<string, { before: string; after: string }>());
+  const [showChangedOnly, setShowChangedOnly] = useState(true); // Default to showing only changed files
+  const [scrollPosition, setScrollPosition] = useState(0); // Track scroll position to prevent jumping
   const speeds = [0.5, 1, 2, 4];
   
   // Performance optimization: Limit commits for large repositories
@@ -156,7 +158,32 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
   }, [fromCommit, toCommit, data, isLargeRepository, maxCommitsToDisplay]);
 
   const currentCommit = commitsInRange[currentCommitIndex] || null;
-  const currentFileTree = data?.fileTree || null;
+  
+  // Dynamic file tree based on current commit - shows only files changed in that commit
+  const currentFileTree = useMemo(() => {
+    if (data.fileTreeHistory && data.fileTreeHistory[currentCommitIndex]) {
+      return data.fileTreeHistory[currentCommitIndex];
+    }
+    return data?.fileTree || null;
+  }, [data.fileTreeHistory, data.fileTree, currentCommitIndex]);
+
+  // Check if currently selected file has changes in current commit
+  const isCurrentFileChanged = useMemo(() => {
+    if (!currentFileTree || !selectedFile) return false;
+    
+    const findFile = (node: FileTreeNode): boolean => {
+      if (node.path === selectedFile && node.status && node.status !== 'unchanged') {
+        return true;
+      }
+      if (node.children) {
+        return node.children.some(child => findFile(child));
+      }
+      return false;
+    };
+    
+    return findFile(currentFileTree);
+  }, [currentFileTree, selectedFile]);
+  
   const currentArchNote = "";  // For now, no architecture notes in GitAnalysisResponse
   const currentArchDiagram = null;  // For now, no architecture diagrams in GitAnalysisResponse
   const animationProgress = commitsInRange.length > 1 ? currentCommitIndex / (commitsInRange.length - 1) : (commitsInRange.length === 1 ? 1 : 0);
