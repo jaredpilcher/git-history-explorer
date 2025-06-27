@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { File, Folder, FolderOpen } from "lucide-react";
+import { File, Folder, FolderOpen, Filter, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface FileTreeNode {
   name: string;

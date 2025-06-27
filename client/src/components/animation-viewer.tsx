@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GitCommit } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { diffLines } from 'diff';
 
 interface AnimationViewerProps {
   fromContent: string;
@@ -41,7 +42,12 @@ export function AnimationViewer({ fromContent, toContent, progress, selectedFile
     }
   }, [tooltip]);
 
-  // Simple diff visualization (without external library for now)
+  // Enhanced diff visualization with proper line-by-line diffing
+  const diffParts = useMemo(() => {
+    if (!fromContent || !toContent) return [];
+    return diffLines(fromContent, toContent);
+  }, [fromContent, toContent]);
+
   const renderDiff = () => {
     if (!fromContent || !toContent) {
       return (
@@ -51,56 +57,73 @@ export function AnimationViewer({ fromContent, toContent, progress, selectedFile
       );
     }
 
-    const fromLines = fromContent.split('\n');
-    const toLines = toContent.split('\n');
-    const maxLines = Math.max(fromLines.length, toLines.length);
+    if (diffParts.length === 0) {
+      return (
+        <div className="text-muted-foreground p-4 text-center">
+          No differences found between the selected commits
+        </div>
+      );
+    }
 
     return (
-      <div className="space-y-1">
-        {Array.from({ length: maxLines }, (_, i) => {
-          const fromLine = fromLines[i] || '';
-          const toLine = toLines[i] || '';
-          const isDifferent = fromLine !== toLine;
-          const isAdded = !fromLine && toLine;
-          const isRemoved = fromLine && !toLine;
+      <div className="space-y-0.5">
+        {diffParts.map((part, index) => {
+          const isAdded = part.added;
+          const isRemoved = part.removed;
+          const isUnchanged = !isAdded && !isRemoved;
           
-          const bgColor = isAdded 
-            ? `rgba(22, 163, 74, ${progress * 0.3})` 
-            : isRemoved 
-            ? `rgba(220, 38, 38, ${(1 - progress) * 0.3})` 
-            : isDifferent 
-            ? `rgba(234, 179, 8, ${progress * 0.2})`
-            : 'rgba(0, 0, 0, 0)';
-
-          const sign = isAdded ? '+' : isRemoved ? '-' : isDifferent ? '~' : ' ';
-          const lineColor = isAdded 
-            ? 'text-green-400' 
-            : isRemoved 
-            ? 'text-red-400' 
-            : isDifferent 
-            ? 'text-yellow-400'
-            : 'text-muted-foreground';
-
-          return (
-            <motion.div
-              key={i}
-              className={`flex ${isDifferent ? 'cursor-pointer' : ''}`}
-              initial={{ opacity: 0, x: isAdded ? 20 : (isRemoved ? -20 : 0) }}
-              animate={{ 
-                opacity: isAdded ? progress : (isRemoved ? 1 - progress : 1), 
-                x: 0,
-                backgroundColor: bgColor
-              }}
-              onClick={isDifferent ? handleLineClick : undefined}
-            >
-              <span className={`w-8 select-none ${lineColor} text-xs`}>
-                {sign}
-              </span>
-              <span className="flex-1 text-xs font-mono">
-                {progress > 0.5 ? toLine : fromLine}
-              </span>
-            </motion.div>
+          // Split the part value into lines for better visualization
+          const lines = part.value.split('\n').filter((line, i, arr) => 
+            // Keep empty lines except the last one if it's empty
+            line.length > 0 || i < arr.length - 1
           );
+
+          return lines.map((line, lineIndex) => {
+            const lineKey = `${index}-${lineIndex}`;
+            const sign = isAdded ? '+' : isRemoved ? '-' : ' ';
+            const lineColor = isAdded 
+              ? 'text-green-400' 
+              : isRemoved 
+              ? 'text-red-400' 
+              : 'text-muted-foreground';
+
+            // Animation variants for fading effect
+            const variants = {
+              initial: { 
+                opacity: isAdded ? 0 : 1, 
+                x: isAdded ? 20 : (isRemoved ? 0 : 0),
+                backgroundColor: 'rgba(0, 0, 0, 0)'
+              },
+              animate: { 
+                opacity: isAdded ? progress : (isRemoved ? 1 - progress : 1),
+                x: 0,
+                backgroundColor: isAdded 
+                  ? `rgba(22, 163, 74, ${progress * 0.2})` 
+                  : isRemoved 
+                  ? `rgba(220, 38, 38, ${(1 - progress) * 0.2})` 
+                  : 'rgba(0, 0, 0, 0)'
+              }
+            };
+
+            return (
+              <motion.div
+                key={lineKey}
+                className={`flex ${(isAdded || isRemoved) ? 'cursor-pointer' : ''} hover:bg-slate-800/50 transition-colors`}
+                variants={variants}
+                initial="initial"
+                animate="animate"
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                onClick={(isAdded || isRemoved) ? handleLineClick : undefined}
+              >
+                <span className={`w-8 select-none ${lineColor} text-xs flex-shrink-0 text-center`}>
+                  {sign}
+                </span>
+                <span className="flex-1 text-xs font-mono whitespace-pre-wrap break-all">
+                  {line || ' '}
+                </span>
+              </motion.div>
+            );
+          });
         })}
       </div>
     );

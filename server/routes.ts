@@ -103,6 +103,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const files = lsTree.trim().split('\n').filter((f: string) => f);
           
           fileTree = buildFileTree(files, diffSummary?.files || []);
+          
+          // Also build a changed-files-only tree for better visualization
+          const changedFiles = diffSummary?.files?.map(f => f.file) || [];
+          const changedFileTree = buildChangedFilesTree(changedFiles, diffSummary?.files || []);
+          
+          // Add the changed files tree to the response
+          (fileTree as any).changedFilesOnly = changedFileTree;
         } catch (treeError) {
           console.warn('Could not get file tree:', treeError);
           fileTree = {
@@ -234,6 +241,54 @@ function buildFileTree(files: string[], changedFiles: any[]): FileTreeNode {
                                changeInfo.additions > 0 ? 'added' : 'deleted') : 'unchanged',
           additions: isFile ? changeInfo?.additions : undefined,
           deletions: isFile ? changeInfo?.deletions : undefined,
+          children: isFile ? undefined : [],
+        };
+        
+        if (!current.children) current.children = [];
+        current.children.push(child);
+      }
+      
+      current = child;
+    }
+  }
+
+  return root;
+}
+
+// Build a file tree containing only changed files
+function buildChangedFilesTree(changedFiles: string[], changeInfo: any[]): FileTreeNode {
+  const root: FileTreeNode = {
+    name: 'root',
+    type: 'folder',
+    path: '/',
+    children: [],
+  };
+
+  const changedFileMap = new Map(
+    changeInfo.map(f => [f.file, { additions: f.insertions, deletions: f.deletions }])
+  );
+
+  for (const filePath of changedFiles) {
+    const parts = filePath.split('/');
+    let current = root;
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const currentPath = parts.slice(0, i + 1).join('/');
+      const isFile = i === parts.length - 1;
+      
+      let child = current.children?.find(c => c.name === part);
+      
+      if (!child) {
+        const changeStats = changedFileMap.get(filePath);
+        child = {
+          name: part,
+          type: isFile ? 'file' : 'folder',
+          path: currentPath,
+          status: changeStats ? (changeStats.additions > 0 && changeStats.deletions > 0 ? 'modified' : 
+                               changeStats.additions > 0 ? 'added' : 'deleted') : 'modified',
+          additions: isFile ? changeStats?.additions : undefined,
+          deletions: isFile ? changeStats?.deletions : undefined,
           children: isFile ? undefined : [],
         };
         
