@@ -436,7 +436,7 @@ async function generatePerCommitChanges(repoGit: any, commits: any[]): Promise<F
       } else {
         // For the first commit, get all files as "added"
         const files = await repoGit.raw(['ls-tree', '-r', '--name-only', currentCommit.hash]);
-        changedFiles = files.split('\n').filter(f => f.trim()).map(file => ({
+        changedFiles = files.split('\n').filter((f: string) => f.trim()).map((file: string) => ({
           file,
           insertions: 1,
           deletions: 0,

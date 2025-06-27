@@ -17,17 +17,21 @@ interface FileTreeViewProps {
   tree: FileTreeNode | null;
   onFileSelect: (filePath: string) => void;
   selectedFile: string;
+  isCurrentFileChanged?: boolean; // Whether the selected file has changes in current commit
 }
 
-export function FileTreeView({ tree, onFileSelect, selectedFile }: FileTreeViewProps) {
-  const [showChangedOnly, setShowChangedOnly] = useState(false);
+export function FileTreeView({ tree, onFileSelect, selectedFile, isCurrentFileChanged = true }: FileTreeViewProps) {
+  const [showChangedOnly, setShowChangedOnly] = useState(true); // Default to showing only changed files
 
-  // Filter tree to show only changed files
+  // Filter tree to show only changed files, but always include the selected file
   const filterChangedFiles = (node: FileTreeNode): FileTreeNode | null => {
     if (!node) return null;
     
     if (node.type === 'file') {
-      return node.status && node.status !== 'unchanged' ? node : null;
+      // Always include the selected file, even if unchanged
+      const isSelected = node.path === selectedFile;
+      const hasChanges = node.status && node.status !== 'unchanged';
+      return (hasChanges || isSelected) ? node : null;
     }
     
     // For folders, recursively filter children
@@ -35,7 +39,7 @@ export function FileTreeView({ tree, onFileSelect, selectedFile }: FileTreeViewP
       ?.map(child => filterChangedFiles(child))
       .filter(Boolean) as FileTreeNode[];
     
-    // Only include folder if it has changed children
+    // Only include folder if it has changed children or contains the selected file
     if (filteredChildren && filteredChildren.length > 0) {
       return {
         ...node,
@@ -95,6 +99,8 @@ export function FileTreeView({ tree, onFileSelect, selectedFile }: FileTreeViewP
           onClick={() => isFolder ? setIsOpen(!isOpen) : onFileSelect(currentPath)}
           className={`flex items-center gap-2 p-1.5 rounded-md cursor-pointer text-sm hover:bg-muted transition-colors ${
             isSelected ? 'bg-primary/10 text-primary' : ''
+          } ${
+            isSelected && !isCurrentFileChanged ? 'opacity-50' : ''
           }`}
           style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }}
           variants={backgroundVariant}

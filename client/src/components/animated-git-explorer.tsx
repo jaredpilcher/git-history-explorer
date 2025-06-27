@@ -304,7 +304,8 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
             <FileTreeView 
               tree={currentFileTree} 
               onFileSelect={handleFileSelect} 
-              selectedFile={selectedFile} 
+              selectedFile={selectedFile}
+              isCurrentFileChanged={isCurrentFileChanged}
             />
           </div>
           <div className="flex-shrink-0 h-64 md:h-1/2 border-t overflow-y-auto">
