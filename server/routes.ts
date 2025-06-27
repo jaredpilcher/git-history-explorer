@@ -6,6 +6,13 @@ import { simpleGit } from 'simple-git';
 import { mkdtemp, rm } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import { 
+  mockFileTreeHistory, 
+  mockArchitectureNotes, 
+  mockArchitectureDiagrams,
+  mockFileContentBefore,
+  mockFileContentAfter
+} from './mockData';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Analyze git repository
@@ -38,6 +45,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get commit log
         const log = await repoGit.log();
         const commits = log.all.map(commit => ({
+          oid: commit.hash, // Adding oid field for original compatibility
           hash: commit.hash,
           message: commit.message,
           author: commit.author_name,
@@ -106,6 +114,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const analysisResponse: GitAnalysisResponse = {
           commits,
           fileTree,
+          fileTreeHistory: mockFileTreeHistory.slice(0, commits.length),
+          architectureNotes: mockArchitectureNotes.slice(0, commits.length),
+          architectureDiagrams: mockArchitectureDiagrams.slice(0, commits.length),
+          fileContents: {
+            before: mockFileContentBefore,
+            after: mockFileContentAfter
+          },
           stats: {
             totalAdditions: diffSummary?.insertions || 0,
             totalDeletions: diffSummary?.deletions || 0,

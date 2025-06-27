@@ -54,8 +54,31 @@ export const fileTreeNodeSchema = z.object({
 
 export type FileTreeNode = z.infer<typeof fileTreeNodeSchema>;
 
+// Architecture diagram types
+export const architectureDiagramNodeSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  x: z.number(),
+  y: z.number(),
+});
+
+export const architectureDiagramLinkSchema = z.object({
+  source: z.string(),
+  target: z.string(),
+});
+
+export const architectureDiagramSchema = z.object({
+  nodes: z.array(architectureDiagramNodeSchema),
+  links: z.array(architectureDiagramLinkSchema),
+});
+
+export type ArchitectureDiagramNode = z.infer<typeof architectureDiagramNodeSchema>;
+export type ArchitectureDiagramLink = z.infer<typeof architectureDiagramLinkSchema>;
+export type ArchitectureDiagram = z.infer<typeof architectureDiagramSchema>;
+
 export const gitAnalysisResponseSchema = z.object({
   commits: z.array(z.object({
+    oid: z.string(), // Note: using 'oid' to match original format
     hash: z.string(),
     message: z.string(),
     author: z.string(),
@@ -63,6 +86,13 @@ export const gitAnalysisResponseSchema = z.object({
     filesChanged: z.number(),
   })),
   fileTree: fileTreeNodeSchema,
+  fileTreeHistory: z.array(fileTreeNodeSchema),
+  architectureNotes: z.array(z.string()),
+  architectureDiagrams: z.array(architectureDiagramSchema),
+  fileContents: z.object({
+    before: z.string(),
+    after: z.string(),
+  }),
   stats: z.object({
     totalAdditions: z.number(),
     totalDeletions: z.number(),
