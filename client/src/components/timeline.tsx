@@ -1,16 +1,9 @@
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent } from "@/components/ui/card";
-
-interface GitCommit {
-  oid: string;
-  hash: string;
-  message: string;
-  author: string;
-  date: string;
-}
+import type { GitAnalysisResponse } from "@shared/schema";
 
 interface TimelineProps {
-  commits: GitCommit[];
+  commits: GitAnalysisResponse['commits'];
   currentIndex: number;
   onTimelineChange: (index: number) => void;
 }

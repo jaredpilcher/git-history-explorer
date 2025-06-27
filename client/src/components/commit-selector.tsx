@@ -2,17 +2,10 @@ import { ChevronRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-
-interface GitCommit {
-  oid: string;
-  hash: string;
-  message: string;
-  author: string;
-  date: string;
-}
+import type { GitAnalysisResponse } from "@shared/schema";
 
 interface CommitSelectorProps {
-  commits: GitCommit[];
+  commits: GitAnalysisResponse['commits'];
   fromCommit: string;
   toCommit: string;
   onFromChange: (value: string) => void;

@@ -1,15 +1,8 @@
 import { User, GitCommit } from "lucide-react";
-
-interface GitCommit {
-  oid: string;
-  hash: string;
-  message: string;
-  author: string;
-  date: string;
-}
+import type { GitAnalysisResponse } from "@shared/schema";
 
 interface CommitHistoryProps {
-  commits: GitCommit[];
+  commits: GitAnalysisResponse['commits'];
 }
 
 export function CommitHistory({ commits }: CommitHistoryProps) {
