@@ -70,7 +70,7 @@ export function AnimationViewer({ fromContent, toContent, progress, selectedFile
             ? `rgba(220, 38, 38, ${(1 - progress) * 0.3})` 
             : isDifferent 
             ? `rgba(234, 179, 8, ${progress * 0.2})`
-            : 'transparent';
+            : 'rgba(0, 0, 0, 0)';
 
           const sign = isAdded ? '+' : isRemoved ? '-' : isDifferent ? '~' : ' ';
           const lineColor = isAdded 
