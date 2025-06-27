@@ -106,34 +106,37 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
     }
   }, [data, maxCommitsToDisplay]);
 
-  // Handle file selection and fetch its content
+  // Handle file selection - simplified without real-time fetching during animations
   const handleFileSelect = useCallback((filePath: string) => {
     setSelectedFile(filePath);
     
-    // Fetch specific file content for selected commits
-    if (fromCommit && toCommit && filePath) {
-      fileContentMutation.mutate({
-        filePath,
-        fromCommit,
-        toCommit
-      });
-    }
-  }, [fromCommit, toCommit]);
-
-  // Update file content when commit range changes (only when not playing)
-  useEffect(() => {
-    if (selectedFile && fromCommit && toCommit && !isPlaying) {
-      const timeoutId = setTimeout(() => {
+    // Only fetch new content when user manually changes file and not during animations
+    if (fromCommit && toCommit && filePath && !isPlaying) {
+      const cacheKey = `${filePath}-${fromCommit}-${toCommit}`;
+      
+      // Check cache first to avoid API calls
+      if (contentCache.has(cacheKey)) {
+        setFileContent(contentCache.get(cacheKey)!);
+      } else {
         fileContentMutation.mutate({
-          filePath: selectedFile,
+          filePath,
           fromCommit,
           toCommit
         });
-      }, 300); // Debounce to prevent rapid API calls
-      
-      return () => clearTimeout(timeoutId);
+      }
     }
-  }, [fromCommit, toCommit, selectedFile, isPlaying]);
+  }, [fromCommit, toCommit, isPlaying, contentCache]);
+
+  // Simplified: Only update file content when commit selectors change manually, not during playback
+  useEffect(() => {
+    if (selectedFile && fromCommit && toCommit && !isPlaying) {
+      const cacheKey = `${selectedFile}-${fromCommit}-${toCommit}`;
+      
+      if (contentCache.has(cacheKey)) {
+        setFileContent(contentCache.get(cacheKey)!);
+      }
+    }
+  }, [fromCommit, toCommit, selectedFile, isPlaying, contentCache]);
 
   const { commitsInRange, fromIndex, displayCommits } = useMemo(() => {
     if (!data?.commits) return { commitsInRange: [], fromIndex: -1, displayCommits: [] };
