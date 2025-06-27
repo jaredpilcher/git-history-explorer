@@ -54,7 +54,7 @@ export function FileTreeView({ tree, onFileSelect, selectedFile }: FileTreeViewP
         transition: { duration: 0.1, repeat: 3, repeatType: "reverse" as const } 
       },
       normal: { 
-        backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.2)' : 'transparent' 
+        backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.2)' : 'rgba(0, 0, 0, 0)' 
       }
     };
 
