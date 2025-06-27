@@ -36,27 +36,43 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
   const [currentCommitIndex, setCurrentCommitIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
+  const [isLargeRepository, setIsLargeRepository] = useState(false);
   const speeds = [0.5, 1, 2, 4];
+  
+  // Performance optimization: Limit commits for large repositories
+  const maxCommitsToDisplay = 50;
   
   const { theme, setTheme } = useTheme();
 
-  // Initialize commit range
+  // Initialize commit range and check for large repository
   useEffect(() => {
     if (data.commits && data.commits.length > 0) {
       setFromCommit(data.commits[0].oid);
       setToCommit(data.commits[data.commits.length - 1].oid);
       const firstFile = data.fileTree?.children?.find((c: FileTreeNode) => c.type === 'file');
       setSelectedFile(firstFile?.name || '');
+      
+      // Set large repository flag for performance optimizations
+      setIsLargeRepository(data.commits.length > maxCommitsToDisplay);
     }
-  }, [data]);
+  }, [data, maxCommitsToDisplay]);
 
-  const { commitsInRange, fromIndex } = useMemo(() => {
-    if (!data?.commits) return { commitsInRange: [], fromIndex: -1 };
-    const fromI = data.commits.findIndex(c => c.oid === fromCommit);
-    const toI = data.commits.findIndex(c => c.oid === toCommit);
-    if (fromI === -1 || toI === -1 || fromI > toI) return { commitsInRange: [], fromIndex: -1 };
-    return { commitsInRange: data.commits.slice(fromI, toI + 1), fromIndex: fromI };
-  }, [fromCommit, toCommit, data]);
+  const { commitsInRange, fromIndex, displayCommits } = useMemo(() => {
+    if (!data?.commits) return { commitsInRange: [], fromIndex: -1, displayCommits: [] };
+    
+    // For large repositories, limit the number of commits to display
+    const commits = isLargeRepository ? data.commits.slice(0, maxCommitsToDisplay) : data.commits;
+    
+    const fromI = commits.findIndex(c => c.oid === fromCommit);
+    const toI = commits.findIndex(c => c.oid === toCommit);
+    if (fromI === -1 || toI === -1 || fromI > toI) return { commitsInRange: [], fromIndex: -1, displayCommits: commits };
+    
+    return { 
+      commitsInRange: commits.slice(fromI, toI + 1), 
+      fromIndex: fromI,
+      displayCommits: commits 
+    };
+  }, [fromCommit, toCommit, data, isLargeRepository, maxCommitsToDisplay]);
 
   const currentCommit = commitsInRange[currentCommitIndex] || null;
   const currentFileTree = data?.fileTree || null;

@@ -99,7 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Build file tree from git ls-tree
         try {
           const lsTree = await repoGit.raw(['ls-tree', '-r', '--name-only', 'HEAD']);
-          const files = lsTree.trim().split('\n').filter(f => f);
+          const files = lsTree.trim().split('\n').filter((f: string) => f);
           
           fileTree = buildFileTree(files, diffSummary?.files || []);
         } catch (treeError) {
@@ -234,7 +234,7 @@ async function generateFileTreeHistory(repoGit: any, commits: any[]): Promise<Fi
   for (const commit of commits.slice(0, 10)) { // Limit to first 10 commits for performance
     try {
       const lsTree = await repoGit.raw(['ls-tree', '-r', '--name-only', commit.hash]);
-      const files = lsTree.trim().split('\n').filter(f => f);
+      const files = lsTree.trim().split('\n').filter((f: string) => f);
       
       const tree = buildFileTree(files, []);
       fileTreeHistory.push(tree);
@@ -310,13 +310,14 @@ function generateArchitectureDiagrams(commits: any[]): any[] {
 // Get actual file contents for diff visualization
 async function getFileContents(repoGit: any, fromCommit?: string, toCommit?: string): Promise<{ before: string; after: string }> {
   try {
+    const codeFileExtensions = ['.js', '.jsx', '.ts', '.tsx', '.py', '.java', '.cpp', '.c', '.go', '.rs'];
+    
     if (!fromCommit || !toCommit) {
       // Get the latest file from the repository
       const lsTree = await repoGit.raw(['ls-tree', '-r', '--name-only', 'HEAD']);
-      const files = lsTree.trim().split('\n').filter(f => f);
-      const firstCodeFile = files.find(f => 
-        f.endsWith('.js') || f.endsWith('.jsx') || f.endsWith('.ts') || 
-        f.endsWith('.tsx') || f.endsWith('.py') || f.endsWith('.java')
+      const files: string[] = lsTree.trim().split('\n').filter(Boolean);
+      const firstCodeFile = files.find(file => 
+        codeFileExtensions.some(ext => file.endsWith(ext))
       );
       
       if (firstCodeFile) {
@@ -326,10 +327,9 @@ async function getFileContents(repoGit: any, fromCommit?: string, toCommit?: str
     } else {
       // Get file content for specific commits
       const lsTree = await repoGit.raw(['ls-tree', '-r', '--name-only', toCommit]);
-      const files = lsTree.trim().split('\n').filter(f => f);
-      const firstCodeFile = files.find(f => 
-        f.endsWith('.js') || f.endsWith('.jsx') || f.endsWith('.ts') || 
-        f.endsWith('.tsx') || f.endsWith('.py') || f.endsWith('.java')
+      const files: string[] = lsTree.trim().split('\n').filter(Boolean);
+      const firstCodeFile = files.find(file => 
+        codeFileExtensions.some(ext => file.endsWith(ext))
       );
       
       if (firstCodeFile) {
