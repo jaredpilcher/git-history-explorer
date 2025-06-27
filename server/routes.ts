@@ -59,7 +59,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let fileTree: FileTreeNode;
         let fileDiffs: Record<string, any> = {};
         
-        if (fromCommit && toCommit) {
+        // Always analyze between first and last commit for better diff visualization
+        const firstCommit = commits[commits.length - 1]?.hash;
+        const lastCommit = commits[0]?.hash;
+        
+        if (firstCommit && lastCommit && firstCommit !== lastCommit) {
+          try {
+            diffSummary = await repoGit.diffSummary([firstCommit, lastCommit]);
+            
+            // Get detailed diff for each file
+            for (const file of diffSummary.files) {
+              try {
+                const diff = await repoGit.diff([firstCommit, lastCommit, '--', file.file]);
+                const fileStats = file as any;
+                fileDiffs[file.file] = {
+                  before: '', 
+                  after: '',  
+                  additions: fileStats.insertions || 0,
+                  deletions: fileStats.deletions || 0,
+                  diff: diff,
+                };
+              } catch (fileError) {
+                console.warn(`Could not get diff for file ${file.file}:`, fileError);
+              }
+            }
+          } catch (diffError) {
+            console.warn('Could not get diff summary:', diffError);
+            diffSummary = { files: [], insertions: 0, deletions: 0, changed: 0 };
+          }
+        } else if (fromCommit && toCommit) {
           try {
             diffSummary = await repoGit.diffSummary([fromCommit, toCommit]);
             
@@ -67,12 +95,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             for (const file of diffSummary.files) {
               try {
                 const diff = await repoGit.diff([fromCommit, toCommit, '--', file.file]);
-                const fileStats = file as any; // Type assertion for git diff stats
+                const fileStats = file as any;
                 fileDiffs[file.file] = {
-                  before: '', // In a real implementation, would extract before content
-                  after: '',  // In a real implementation, would extract after content
+                  before: '', 
+                  after: '',  
                   additions: fileStats.insertions || 0,
                   deletions: fileStats.deletions || 0,
+                  diff: diff,
                 };
               } catch (fileError) {
                 console.warn(`Could not get diff for file ${file.file}:`, fileError);
@@ -83,15 +112,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             diffSummary = { files: [], insertions: 0, deletions: 0, changed: 0 };
           }
         } else {
-          // If no specific commits, analyze overall repository structure
+          // If no specific commits, analyze recent changes
           try {
-            const status = await repoGit.status();
-            diffSummary = { 
-              files: [], 
-              insertions: 0, 
-              deletions: 0, 
-              changed: status.files.length 
-            };
+            if (commits.length > 1) {
+              const recentCommit = commits[0].hash;
+              const previousCommit = commits[1].hash;
+              diffSummary = await repoGit.diffSummary([previousCommit, recentCommit]);
+            } else {
+              const status = await repoGit.status();
+              diffSummary = { 
+                files: status.files.map(f => ({ file: f.path, insertions: 0, deletions: 0 })), 
+                insertions: 0, 
+                deletions: 0, 
+                changed: status.files.length 
+              };
+            }
           } catch (statusError) {
             diffSummary = { files: [], insertions: 0, deletions: 0, changed: 0 };
           }
@@ -282,7 +317,11 @@ function buildFileTree(files: string[], changedFiles: any[]): FileTreeNode {
   };
 
   const changedFileMap = new Map(
-    changedFiles.map(f => [f.file, { additions: f.insertions, deletions: f.deletions }])
+    changedFiles.map(f => [f.file, { 
+      additions: f.insertions || 0, 
+      deletions: f.deletions || 0,
+      changes: f.changes || 0
+    }])
   );
 
   for (const filePath of files) {
@@ -298,12 +337,23 @@ function buildFileTree(files: string[], changedFiles: any[]): FileTreeNode {
       
       if (!child) {
         const changeInfo = changedFileMap.get(filePath);
+        let status: "added" | "modified" | "deleted" | "unchanged" = 'unchanged';
+        
+        if (changeInfo) {
+          if (changeInfo.additions > 0 && changeInfo.deletions === 0) {
+            status = 'added';
+          } else if (changeInfo.additions === 0 && changeInfo.deletions > 0) {
+            status = 'deleted';
+          } else if (changeInfo.additions > 0 || changeInfo.deletions > 0) {
+            status = 'modified';
+          }
+        }
+        
         child = {
           name: part,
           type: isFile ? 'file' : 'folder',
           path: currentPath,
-          status: changeInfo ? (changeInfo.additions > 0 && changeInfo.deletions > 0 ? 'modified' : 
-                               changeInfo.additions > 0 ? 'added' : 'deleted') : 'unchanged',
+          status: status,
           additions: isFile ? changeInfo?.additions : undefined,
           deletions: isFile ? changeInfo?.deletions : undefined,
           children: isFile ? undefined : [],
