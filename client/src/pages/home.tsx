@@ -48,7 +48,32 @@ export default function Home() {
   };
 
   if (analysisData) {
-    return <GitExplorer data={analysisData} repoUrl={repoUrl} onReset={handleReset} />;
+    // Transform the data to match the new interface
+    const transformedData = {
+      commits: analysisData.commits.map(commit => ({
+        oid: commit.hash,
+        hash: commit.hash,
+        message: commit.message,
+        author: commit.author,
+        date: commit.date,
+        filesChanged: commit.filesChanged
+      })),
+      fileTreeHistory: [analysisData.fileTree], // Mock array for now
+      architectureNotes: ["Initial analysis complete. No specific architectural changes detected."],
+      architectureDiagrams: [{
+        nodes: [
+          { id: "app", label: "Application", x: 150, y: 100 },
+          { id: "db", label: "Database", x: 350, y: 100 }
+        ],
+        links: [{ source: "app", target: "db" }]
+      }],
+      fileContents: {
+        before: "// Previous version",
+        after: "// Current version"
+      }
+    };
+
+    return <AnimatedGitExplorer data={transformedData} repoUrl={repoUrl} onReset={handleReset} />;
   }
 
   return (

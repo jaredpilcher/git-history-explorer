@@ -42,12 +42,12 @@ export const gitAnalysisSchema = z.object({
 
 export type GitAnalysisRequest = z.infer<typeof gitAnalysisSchema>;
 
-export const fileTreeNodeSchema = z.object({
+export const fileTreeNodeSchema: z.ZodType<FileTreeNode> = z.object({
   name: z.string(),
   type: z.enum(["file", "folder"]),
   path: z.string(),
   status: z.enum(["added", "modified", "deleted", "unchanged"]).optional(),
-  children: z.array(z.lazy(() => fileTreeNodeSchema)).optional(),
+  children: z.lazy(() => fileTreeNodeSchema).array().optional(),
   additions: z.number().optional(),
   deletions: z.number().optional(),
 });
