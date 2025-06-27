@@ -46,7 +46,7 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
   const speeds = [0.5, 1, 2, 4];
   
   // Performance optimization: Limit commits for large repositories
-  const maxCommitsToDisplay = 50;
+  const maxCommitsToDisplay = 20; // Reduced since we default to 5 commits
   
   const { theme, setTheme } = useTheme();
 
@@ -93,8 +93,9 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
   // Initialize commit range and check for large repository
   useEffect(() => {
     if (data.commits && data.commits.length > 0) {
-      setFromCommit(data.commits[0].oid);
-      setToCommit(data.commits[data.commits.length - 1].oid);
+      // Now commits are ordered earliest to latest, so first is earliest and last is latest
+      setFromCommit(data.commits[0].oid); // Earliest commit
+      setToCommit(data.commits[data.commits.length - 1].oid); // Latest commit
       const firstFile = data.fileTree?.children?.find((c: FileTreeNode) => c.type === 'file');
       setSelectedFile(firstFile?.path || '');
       

@@ -43,9 +43,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await git.clone(repoUrl, tempDir, ['--depth=50', '--single-branch']);
         const repoGit = simpleGit(tempDir);
         
-        // Get commit log with limit for performance
+        // Get commit log with limit for performance - default to last 5 commits
         const log = await repoGit.log({ maxCount: 100 });
-        const commits = log.all.map(commit => ({
+        const allCommits = log.all.map(commit => ({
           oid: commit.hash, // Adding oid field for original compatibility
           hash: commit.hash,
           message: commit.message,
@@ -53,6 +53,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           date: commit.date,
           filesChanged: 0, // Will be calculated from diff
         }));
+        
+        // Reverse order so oldest commits come first (earliest to latest)
+        const commits = allCommits.reverse().slice(-5); // Take last 5 commits (most recent)
 
         // Get file differences between commits
         let diffSummary;
@@ -60,8 +63,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let fileDiffs: Record<string, any> = {};
         
         // Always analyze between first and last commit for better diff visualization
-        const firstCommit = commits[commits.length - 1]?.hash;
-        const lastCommit = commits[0]?.hash;
+        const firstCommit = commits[0]?.hash; // Earliest commit (now first in array)
+        const lastCommit = commits[commits.length - 1]?.hash; // Latest commit (now last in array)
         
         if (firstCommit && lastCommit && firstCommit !== lastCommit) {
           try {
@@ -424,7 +427,7 @@ async function generatePerCommitChanges(repoGit: any, commits: any[]): Promise<F
   
   for (let i = 0; i < commits.length; i++) {
     const currentCommit = commits[i];
-    const previousCommit = commits[i + 1]; // Previous in chronological order
+    const previousCommit = commits[i - 1]; // Previous commit (since array is now chronological)
     
     try {
       let changedFiles: any[] = [];

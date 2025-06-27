@@ -170,6 +170,13 @@ Changelog:
   - **Improved Animation System**: Enhanced progress-based fading for added/removed/modified lines
   - **Better UX Patterns**: Hover effects, loading states, and smooth transitions throughout the interface
   - **Performance Optimizations**: Smart file filtering and efficient content loading for large repositories
+- June 27, 2025. Advanced UI/UX improvements for better navigation and commit visualization:
+  - **Dynamic File Tree Updates**: File tree now refreshes as slider moves, showing only files changed in each specific commit
+  - **Viewport Jump Prevention**: Added scroll position tracking to prevent page jumping during slider navigation
+  - **File Gray-out System**: Selected files appear grayed when not changed in current commit but remain visible for continuity
+  - **Reversed Commit Order**: Changed commit display from newest-first to oldest-first (earliest to latest) for better chronological flow
+  - **Default 5 Commits**: Reduced default commit analysis to last 5 commits for faster loading and better focus
+  - **Improved From/To Logic**: Updated commit selectors and slider to work with chronological order (earliest → latest)
 
 ## User Preferences
 
