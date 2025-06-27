@@ -165,6 +165,7 @@ export function GitExplorer({ data, repoUrl, onReset }: GitExplorerProps) {
                 size="icon"
                 onClick={() => setSelectedCommitIndex(Math.max(0, selectedCommitIndex - 1))}
                 disabled={selectedCommitIndex === 0}
+                className="touch-manipulation h-9 w-9"
               >
                 <SkipBack className="h-4 w-4" />
               </Button>
@@ -172,6 +173,7 @@ export function GitExplorer({ data, repoUrl, onReset }: GitExplorerProps) {
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsPlaying(!isPlaying)}
+                className="touch-manipulation h-9 w-9"
               >
                 {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
               </Button>
@@ -180,6 +182,7 @@ export function GitExplorer({ data, repoUrl, onReset }: GitExplorerProps) {
                 size="icon"
                 onClick={() => setSelectedCommitIndex(Math.min(data.commits.length - 1, selectedCommitIndex + 1))}
                 disabled={selectedCommitIndex === data.commits.length - 1}
+                className="touch-manipulation h-9 w-9"
               >
                 <SkipForward className="h-4 w-4" />
               </Button>

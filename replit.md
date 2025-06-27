@@ -113,6 +113,14 @@ This is an Animated Git Change Explorer application that visualizes code evoluti
 
 Changelog:
 - June 27, 2025. Initial setup
+- June 27, 2025. Enhanced mobile responsiveness with:
+  - Mobile-first sidebar with slide-out drawer navigation
+  - Responsive typography and spacing across all screen sizes
+  - Touch-friendly button sizes and interactions
+  - Optimized file tree display for mobile devices
+  - Improved header layout with responsive repository name display
+  - Mobile-optimized form inputs and buttons
+  - Enhanced viewport meta tags for better mobile experience
 
 ## User Preferences
 
