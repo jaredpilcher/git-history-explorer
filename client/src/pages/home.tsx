@@ -4,7 +4,7 @@ import { GitBranch, Loader2, Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { GitExplorer } from "@/components/git-explorer";
+import { AnimatedGitExplorer } from "@/components/animated-git-explorer";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import type { GitAnalysisResponse } from "@/lib/git-types";
