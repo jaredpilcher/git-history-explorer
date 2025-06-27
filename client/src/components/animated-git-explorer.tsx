@@ -21,51 +21,10 @@ import { ArchitectureDiagramComponent } from "./architecture-diagram";
 import { Timeline } from "./timeline";
 import { PlaybackControls } from "./playback-controls";
 
-interface GitCommit {
-  oid: string;
-  hash: string;
-  message: string;
-  author: string;
-  date: string;
-  filesChanged: number;
-}
-
-interface FileTreeNode {
-  name: string;
-  type: "file" | "folder";
-  path: string;
-  status?: "added" | "modified" | "deleted" | "unchanged";
-  children?: FileTreeNode[];
-  additions?: number;
-  deletions?: number;
-}
-
-interface ArchitectureDiagram {
-  nodes: Array<{
-    id: string;
-    label: string;
-    x: number;
-    y: number;
-  }>;
-  links: Array<{
-    source: string;
-    target: string;
-  }>;
-}
-
-interface GitAnalysisData {
-  commits: GitCommit[];
-  fileTreeHistory: FileTreeNode[];
-  architectureNotes: string[];
-  architectureDiagrams: ArchitectureDiagram[];
-  fileContents: {
-    before: string;
-    after: string;
-  };
-}
+import type { GitAnalysisResponse, FileTreeNode, ArchitectureDiagram } from "@shared/schema";
 
 interface AnimatedGitExplorerProps {
-  data: GitAnalysisData;
+  data: GitAnalysisResponse;
   repoUrl: string;
   onReset: () => void;
 }
@@ -86,7 +45,7 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
     if (data.commits && data.commits.length > 0) {
       setFromCommit(data.commits[0].oid);
       setToCommit(data.commits[data.commits.length - 1].oid);
-      const firstFile = data.fileTreeHistory?.[0]?.children?.find(c => c.type === 'file');
+      const firstFile = data.fileTree?.children?.find((c: FileTreeNode) => c.type === 'file');
       setSelectedFile(firstFile?.name || '');
     }
   }, [data]);
@@ -100,9 +59,9 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
   }, [fromCommit, toCommit, data]);
 
   const currentCommit = commitsInRange[currentCommitIndex] || null;
-  const currentFileTree = data?.fileTreeHistory[fromIndex + currentCommitIndex] || null;
-  const currentArchNote = data?.architectureNotes[fromIndex + currentCommitIndex] || "";
-  const currentArchDiagram = data?.architectureDiagrams[fromIndex + currentCommitIndex] || null;
+  const currentFileTree = data?.fileTree || null;
+  const currentArchNote = "";  // For now, no architecture notes in GitAnalysisResponse
+  const currentArchDiagram = null;  // For now, no architecture diagrams in GitAnalysisResponse
   const animationProgress = commitsInRange.length > 1 ? currentCommitIndex / (commitsInRange.length - 1) : (commitsInRange.length === 1 ? 1 : 0);
 
   const handlePlayPause = useCallback(() => {
