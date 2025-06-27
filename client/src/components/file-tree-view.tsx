@@ -20,6 +20,34 @@ interface FileTreeViewProps {
 }
 
 export function FileTreeView({ tree, onFileSelect, selectedFile }: FileTreeViewProps) {
+  const [showChangedOnly, setShowChangedOnly] = useState(false);
+
+  // Filter tree to show only changed files
+  const filterChangedFiles = (node: FileTreeNode): FileTreeNode | null => {
+    if (!node) return null;
+    
+    if (node.type === 'file') {
+      return node.status && node.status !== 'unchanged' ? node : null;
+    }
+    
+    // For folders, recursively filter children
+    const filteredChildren = node.children
+      ?.map(child => filterChangedFiles(child))
+      .filter(Boolean) as FileTreeNode[];
+    
+    // Only include folder if it has changed children
+    if (filteredChildren && filteredChildren.length > 0) {
+      return {
+        ...node,
+        children: filteredChildren
+      };
+    }
+    
+    return null;
+  };
+
+  const displayTree = showChangedOnly && tree ? filterChangedFiles(tree) : tree;
+
   const FileStatusIcon = ({ status }: { status?: string }) => {
     const icons = {
       added: <span className="text-green-500 font-bold">+</span>,
@@ -123,16 +151,53 @@ export function FileTreeView({ tree, onFileSelect, selectedFile }: FileTreeViewP
 
   return (
     <div className="h-full overflow-y-auto p-2">
-      <h3 className="text-sm font-semibold p-2 mb-2 text-muted-foreground uppercase tracking-wider">
-        File System
-      </h3>
-      <AnimatePresence>
-        {tree ? (
-          <TreeNode key="root-node" node={tree} />
+      <div className="flex items-center justify-between p-2 mb-2">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+          File System
+        </h3>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowChangedOnly(!showChangedOnly)}
+          className={`h-7 px-2 text-xs ${showChangedOnly ? 'bg-primary/10 text-primary' : ''}`}
+          title={showChangedOnly ? "Show all files" : "Show only changed files"}
+        >
+          {showChangedOnly ? (
+            <>
+              <X size={12} className="mr-1" />
+              All Files
+            </>
+          ) : (
+            <>
+              <Filter size={12} className="mr-1" />
+              Changed Only
+            </>
+          )}
+        </Button>
+      </div>
+      <AnimatePresence mode="wait">
+        {displayTree ? (
+          <TreeNode key={`${showChangedOnly ? 'filtered' : 'all'}-root-node`} node={displayTree} />
+        ) : showChangedOnly ? (
+          <motion.p 
+            key="no-changes"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="text-xs text-muted-foreground p-2 text-center"
+          >
+            No changed files found.
+          </motion.p>
         ) : (
-          <p className="text-xs text-muted-foreground p-2">
+          <motion.p 
+            key="no-data"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="text-xs text-muted-foreground p-2"
+          >
             No file data available.
-          </p>
+          </motion.p>
         )}
       </AnimatePresence>
     </div>

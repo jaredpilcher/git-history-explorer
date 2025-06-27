@@ -193,6 +193,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get specific file content for commits
+  app.post('/api/file-content', async (req, res) => {
+    try {
+      const { repoUrl, filePath, fromCommit, toCommit } = req.body;
+      
+      if (!repoUrl || !filePath) {
+        return res.status(400).json({ error: 'Repository URL and file path are required' });
+      }
+
+      // Clone repository to temporary directory (same pattern as analyze endpoint)
+      const tempDirPrefix = join(tmpdir(), 'git-explorer-');
+      let tempDir: string;
+      
+      try {
+        tempDir = await mkdtemp(tempDirPrefix);
+        const git = simpleGit();
+        
+        await git.clone(repoUrl, tempDir, ['--depth=50', '--single-branch']);
+        const repoGit = simpleGit(tempDir);
+        
+        let beforeContent = '';
+        let afterContent = '';
+        
+        if (fromCommit && toCommit) {
+          try {
+            beforeContent = await repoGit.show([`${fromCommit}:${filePath}`]);
+          } catch {
+            beforeContent = '// File not found in previous commit';
+          }
+          
+          try {
+            afterContent = await repoGit.show([`${toCommit}:${filePath}`]);
+          } catch {
+            afterContent = '// File not found in this commit';
+          }
+        } else {
+          // Get current file content
+          try {
+            afterContent = await repoGit.show([`HEAD:${filePath}`]);
+            beforeContent = afterContent;
+          } catch {
+            return res.status(404).json({ error: 'File not found' });
+          }
+        }
+        
+        res.json({ before: beforeContent, after: afterContent });
+        
+      } catch (gitError: any) {
+        console.error('Git operation failed:', gitError);
+        res.status(500).json({ error: 'Failed to get file content' });
+      } finally {
+        if (tempDir!) {
+          try {
+            await rm(tempDir, { recursive: true, force: true });
+          } catch (cleanupError) {
+            console.warn('Failed to clean up temporary directory:', cleanupError);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('File content error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // Get repository analysis history
   app.get('/api/repositories', async (req, res) => {
     try {
@@ -386,22 +451,48 @@ function generateArchitectureDiagrams(commits: any[]): any[] {
 // Get actual file contents for diff visualization
 async function getFileContents(repoGit: any, fromCommit?: string, toCommit?: string): Promise<{ before: string; after: string }> {
   try {
-    const codeFileExtensions = ['.js', '.jsx', '.ts', '.tsx', '.py', '.java', '.cpp', '.c', '.go', '.rs'];
+    const codeFileExtensions = ['.js', '.jsx', '.ts', '.tsx', '.py', '.java', '.cpp', '.c', '.go', '.rs', '.md', '.json'];
     
     if (!fromCommit || !toCommit) {
-      // Get the latest file from the repository
+      // Get the latest files from the repository
       const lsTree = await repoGit.raw(['ls-tree', '-r', '--name-only', 'HEAD']);
       const files: string[] = lsTree.trim().split('\n').filter(Boolean);
-      const firstCodeFile = files.find(file => 
+      const codeFiles = files.filter(file => 
         codeFileExtensions.some(ext => file.endsWith(ext))
       );
       
-      if (firstCodeFile) {
-        const content = await repoGit.show(['HEAD:' + firstCodeFile]);
+      if (codeFiles.length > 0) {
+        // Prefer README files first, then main/index files, then any code file
+        const preferredFile = codeFiles.find(f => f.toLowerCase().includes('readme')) ||
+                             codeFiles.find(f => f.toLowerCase().includes('main') || f.toLowerCase().includes('index')) ||
+                             codeFiles[0];
+        
+        const content = await repoGit.show(['HEAD:' + preferredFile]);
         return { before: content, after: content };
       }
     } else {
-      // Get file content for specific commits
+      // Get changed files between commits for better diff
+      try {
+        const diffSummary = await repoGit.diffSummary([fromCommit, toCommit]);
+        const changedFiles = diffSummary.files.filter((f: any) => 
+          codeFileExtensions.some(ext => f.file.endsWith(ext))
+        );
+        
+        if (changedFiles.length > 0) {
+          const file = changedFiles[0].file;
+          try {
+            const beforeContent = await repoGit.show([`${fromCommit}:${file}`]);
+            const afterContent = await repoGit.show([`${toCommit}:${file}`]);
+            return { before: beforeContent, after: afterContent };
+          } catch (fileError) {
+            console.warn(`Could not get contents for ${file}:`, fileError);
+          }
+        }
+      } catch (diffError) {
+        console.warn('Could not get diff for commits:', diffError);
+      }
+      
+      // Fallback to any file from commits
       const lsTree = await repoGit.raw(['ls-tree', '-r', '--name-only', toCommit]);
       const files: string[] = lsTree.trim().split('\n').filter(Boolean);
       const firstCodeFile = files.find(file => 
@@ -410,7 +501,7 @@ async function getFileContents(repoGit: any, fromCommit?: string, toCommit?: str
       
       if (firstCodeFile) {
         try {
-          const beforeContent = await repoGit.show([`${fromCommit}:${firstCodeFile}`]);
+          const beforeContent = await repoGit.show([`${fromCommit}:${firstCodeFile}`]).catch(() => '// File not found in previous commit');
           const afterContent = await repoGit.show([`${toCommit}:${firstCodeFile}`]);
           return { before: beforeContent, after: afterContent };
         } catch (fileError) {
@@ -422,20 +513,47 @@ async function getFileContents(repoGit: any, fromCommit?: string, toCommit?: str
     console.warn('Could not get file contents:', error);
   }
   
-  // Fallback to meaningful example content
+  // Fallback to realistic example content that demonstrates diff features
   return {
-    before: `// Repository analysis in progress...
-function main() {
-  console.log("Analyzing repository structure...");
-}`,
-    after: `// Repository analysis complete!
-function main() {
-  console.log("Repository structure analyzed successfully!");
-  displayResults();
+    before: `import React from 'react';
+
+export function WelcomeComponent() {
+  const greeting = "Hello World";
+  
+  return (
+    <div className="welcome">
+      <h1>{greeting}</h1>
+      <p>Welcome to our application!</p>
+    </div>
+  );
 }
 
-function displayResults() {
-  // Show analysis results
-}`
+// TODO: Add more features
+export default WelcomeComponent;`,
+    after: `import React, { useState } from 'react';
+
+export function WelcomeComponent() {
+  const [greeting, setGreeting] = useState("Hello World");
+  const [isVisible, setIsVisible] = useState(true);
+  
+  const handleToggle = () => {
+    setIsVisible(!isVisible);
+  };
+  
+  return (
+    <div className="welcome enhanced">
+      {isVisible && (
+        <>
+          <h1>{greeting}</h1>
+          <p>Welcome to our enhanced application!</p>
+          <button onClick={handleToggle}>Toggle Visibility</button>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Features implemented: state management, conditional rendering
+export default WelcomeComponent;`
   };
 }

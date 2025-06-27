@@ -20,6 +20,8 @@ import { ArchitectureNotes } from "./architecture-notes";
 import { ArchitectureDiagramComponent } from "./architecture-diagram";
 import { Timeline } from "./timeline";
 import { PlaybackControls } from "./playback-controls";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 import type { GitAnalysisResponse, FileTreeNode, ArchitectureDiagram } from "@shared/schema";
 
@@ -37,6 +39,7 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [isLargeRepository, setIsLargeRepository] = useState(false);
+  const [fileContent, setFileContent] = useState({ before: '', after: '' });
   const speeds = [0.5, 1, 2, 4];
   
   // Performance optimization: Limit commits for large repositories
@@ -44,18 +47,66 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
   
   const { theme, setTheme } = useTheme();
 
+  // Mutation for fetching specific file content
+  const fileContentMutation = useMutation({
+    mutationFn: async ({ filePath, fromCommit, toCommit }: { filePath: string; fromCommit?: string; toCommit?: string }) => {
+      return await apiRequest(`/api/file-content`, {
+        method: 'POST',
+        body: JSON.stringify({
+          repoUrl,
+          filePath,
+          fromCommit,
+          toCommit
+        })
+      });
+    },
+    onSuccess: (data) => {
+      setFileContent(data);
+    }
+  });
+
   // Initialize commit range and check for large repository
   useEffect(() => {
     if (data.commits && data.commits.length > 0) {
       setFromCommit(data.commits[0].oid);
       setToCommit(data.commits[data.commits.length - 1].oid);
       const firstFile = data.fileTree?.children?.find((c: FileTreeNode) => c.type === 'file');
-      setSelectedFile(firstFile?.name || '');
+      setSelectedFile(firstFile?.path || '');
       
       // Set large repository flag for performance optimizations
       setIsLargeRepository(data.commits.length > maxCommitsToDisplay);
+      
+      // Use initial file content from data or set fallback
+      if (data.fileContents) {
+        setFileContent(data.fileContents);
+      }
     }
   }, [data, maxCommitsToDisplay]);
+
+  // Handle file selection and fetch its content
+  const handleFileSelect = useCallback((filePath: string) => {
+    setSelectedFile(filePath);
+    
+    // Fetch specific file content for selected commits
+    if (fromCommit && toCommit && filePath) {
+      fileContentMutation.mutate({
+        filePath,
+        fromCommit,
+        toCommit
+      });
+    }
+  }, [fromCommit, toCommit, fileContentMutation]);
+
+  // Update file content when commit range changes
+  useEffect(() => {
+    if (selectedFile && fromCommit && toCommit) {
+      fileContentMutation.mutate({
+        filePath: selectedFile,
+        fromCommit,
+        toCommit
+      });
+    }
+  }, [fromCommit, toCommit, selectedFile, fileContentMutation]);
 
   const { commitsInRange, fromIndex, displayCommits } = useMemo(() => {
     if (!data?.commits) return { commitsInRange: [], fromIndex: -1, displayCommits: [] };
