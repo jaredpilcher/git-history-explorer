@@ -70,6 +70,26 @@
   .animate-pulse-slow {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
+
+  /* Mobile optimizations */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+  
+  .scroll-smooth {
+    scroll-behavior: smooth;
+  }
+  
+  @media (max-width: 768px) {
+    .mobile-padding {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+    
+    .mobile-text-sm {
+      font-size: 0.875rem;
+    }
+  }
 }
 
 @keyframes fadeIn {

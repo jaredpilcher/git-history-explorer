@@ -15,7 +15,9 @@ import {
   Settings,
   Plus,
   Minus,
-  GitCommit
+  GitCommit,
+  Menu,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useTheme } from "@/components/theme-provider";
 import type { GitAnalysisResponse, FileTreeNode } from "@/lib/git-types";
 
@@ -37,6 +40,7 @@ export function GitExplorer({ data, repoUrl, onReset }: GitExplorerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeTab, setActiveTab] = useState("file-tree");
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(["/"]));
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
 
   const repoName = repoUrl.split('/').slice(-2).join('/');
@@ -105,7 +109,7 @@ export function GitExplorer({ data, repoUrl, onReset }: GitExplorerProps) {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.2 }}
           className={`flex items-center gap-2 p-2 rounded hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer ${getStatusColor(node.status)}`}
-          style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }}
+          style={{ paddingLeft: `${level * 1.2 + 0.5}rem` }}
           onClick={() => node.type === "folder" && toggleFolder(node.path)}
         >
           {node.type === "folder" ? (
@@ -149,22 +153,110 @@ export function GitExplorer({ data, repoUrl, onReset }: GitExplorerProps) {
     );
   };
 
+  const SidebarContent = () => (
+    <div className="h-full">
+      <ScrollArea className="h-full">
+        <div className="p-4 lg:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Commit Timeline</h2>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSelectedCommitIndex(Math.max(0, selectedCommitIndex - 1))}
+                disabled={selectedCommitIndex === 0}
+              >
+                <SkipBack className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsPlaying(!isPlaying)}
+              >
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSelectedCommitIndex(Math.min(data.commits.length - 1, selectedCommitIndex + 1))}
+                disabled={selectedCommitIndex === data.commits.length - 1}
+              >
+                <SkipForward className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {data.commits.map((commit, index) => (
+              <motion.div
+                key={commit.hash}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                  index === selectedCommitIndex
+                    ? "bg-primary/10 border-primary"
+                    : "border-border hover:bg-muted"
+                }`}
+                onClick={() => {
+                  setSelectedCommitIndex(index);
+                  setIsMobileMenuOpen(false);
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <GitCommit className={`h-4 w-4 mt-1 flex-shrink-0 ${
+                    index === selectedCommitIndex ? "text-primary" : "text-muted-foreground"
+                  }`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {commit.message}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-1 mt-1 text-xs text-muted-foreground">
+                      <span className="truncate max-w-[100px]">{commit.author}</span>
+                      <span>•</span>
+                      <span>{new Date(commit.date).toLocaleDateString()}</span>
+                      <span>•</span>
+                      <span className="font-mono">{commit.hash.slice(0, 7)}</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </ScrollArea>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-sm border-b">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={onReset} className="flex items-center gap-2">
-              <GitBranch className="h-5 w-5 text-primary" />
-              <span className="font-semibold">{repoName}</span>
+        <div className="flex items-center justify-between px-4 lg:px-6 py-4">
+          <div className="flex items-center gap-2 lg:gap-4 min-w-0 flex-1">
+            {/* Mobile menu button */}
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="lg:hidden">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-80 p-0">
+                <SidebarContent />
+              </SheetContent>
+            </Sheet>
+            
+            <Button variant="ghost" onClick={onReset} className="flex items-center gap-2 min-w-0">
+              <GitBranch className="h-5 w-5 text-primary flex-shrink-0" />
+              <span className="font-semibold truncate hidden sm:inline">{repoName}</span>
+              <span className="font-semibold truncate sm:hidden">{repoName.split('/')[1] || repoName}</span>
             </Button>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground hidden md:block">
               {data.commits.length} commits analyzed
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 lg:gap-3">
             <Button
               variant="ghost"
               size="icon"
@@ -173,10 +265,10 @@ export function GitExplorer({ data, repoUrl, onReset }: GitExplorerProps) {
               <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             </Button>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="hidden sm:flex">
               <Share2 className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="hidden sm:flex">
               <Settings className="h-4 w-4" />
             </Button>
           </div>
@@ -184,197 +276,141 @@ export function GitExplorer({ data, repoUrl, onReset }: GitExplorerProps) {
       </header>
 
       <div className="flex">
-        {/* Sidebar */}
-        <aside className="w-80 border-r bg-card h-[calc(100vh-73px)]">
-          <ScrollArea className="h-full">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Commit Timeline</h2>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setSelectedCommitIndex(Math.max(0, selectedCommitIndex - 1))}
-                    disabled={selectedCommitIndex === 0}
-                  >
-                    <SkipBack className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setIsPlaying(!isPlaying)}
-                  >
-                    {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setSelectedCommitIndex(Math.min(data.commits.length - 1, selectedCommitIndex + 1))}
-                    disabled={selectedCommitIndex === data.commits.length - 1}
-                  >
-                    <SkipForward className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                {data.commits.map((commit, index) => (
-                  <motion.div
-                    key={commit.hash}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                      index === selectedCommitIndex
-                        ? "bg-primary/10 border-primary"
-                        : "border-border hover:bg-muted"
-                    }`}
-                    onClick={() => setSelectedCommitIndex(index)}
-                  >
-                    <div className="flex items-start gap-3">
-                      <GitCommit className={`h-4 w-4 mt-1 ${
-                        index === selectedCommitIndex ? "text-primary" : "text-muted-foreground"
-                      }`} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {commit.message}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                          <span>{commit.author}</span>
-                          <span>•</span>
-                          <span>{new Date(commit.date).toLocaleDateString()}</span>
-                          <span>•</span>
-                          <span className="font-mono">{commit.hash.slice(0, 7)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </ScrollArea>
+        {/* Desktop Sidebar */}
+        <aside className="hidden lg:block w-80 border-r bg-card h-[calc(100vh-73px)]">
+          <SidebarContent />
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 h-[calc(100vh-73px)]">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
-            <div className="border-b bg-card">
-              <TabsList className="h-auto p-0 bg-transparent">
+        <main className="flex-1 h-[calc(100vh-73px)] min-w-0">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+            <div className="border-b bg-card px-4 lg:px-6">
+              <TabsList className="h-auto p-0 bg-transparent w-full justify-start">
                 <TabsTrigger value="file-tree" className="data-[state=active]:bg-background">
                   <Folder className="mr-2 h-4 w-4" />
-                  File Tree
+                  <span className="hidden sm:inline">File Tree</span>
+                  <span className="sm:hidden">Files</span>
                 </TabsTrigger>
                 <TabsTrigger value="statistics" className="data-[state=active]:bg-background">
                   <GitCommit className="mr-2 h-4 w-4" />
-                  Statistics
+                  <span className="hidden sm:inline">Statistics</span>
+                  <span className="sm:hidden">Stats</span>
                 </TabsTrigger>
               </TabsList>
             </div>
 
-            <div className="p-6 h-full overflow-auto">
-              <TabsContent value="file-tree" className="mt-0">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-semibold">Repository File Tree</h3>
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 bg-green-500 rounded-full" />
-                      <span>Added</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 bg-yellow-500 rounded-full" />
-                      <span>Modified</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 bg-red-500 rounded-full" />
-                      <span>Deleted</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 bg-slate-300 dark:bg-slate-600 rounded-full" />
-                      <span>Unchanged</span>
+            <div className="flex-1 overflow-auto">
+              <TabsContent value="file-tree" className="mt-0 h-full">
+                <div className="p-4 lg:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                    <h3 className="text-xl font-semibold">Repository File Tree</h3>
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-green-500 rounded-full" />
+                        <span>Added</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-yellow-500 rounded-full" />
+                        <span>Modified</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-red-500 rounded-full" />
+                        <span>Deleted</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-slate-300 dark:bg-slate-600 rounded-full" />
+                        <span>Unchanged</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="space-y-1">
-                      {renderFileTree(data.fileTree)}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="statistics" className="mt-0">
-                <div className="mb-6">
-                  <h3 className="text-xl font-semibold mb-2">Repository Statistics</h3>
-                  <p className="text-muted-foreground">Quantitative analysis of repository changes</p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Lines Added</CardTitle>
-                      <Plus className="h-4 w-4 text-green-600" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold text-green-600">{data.stats.totalAdditions}</div>
-                    </CardContent>
-                  </Card>
 
                   <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Lines Removed</CardTitle>
-                      <Minus className="h-4 w-4 text-red-600" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold text-red-600">{data.stats.totalDeletions}</div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Files Changed</CardTitle>
-                      <FileText className="h-4 w-4 text-blue-600" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold text-blue-600">{data.stats.filesChanged}</div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Commits</CardTitle>
-                      <GitBranch className="h-4 w-4 text-purple-600" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold text-purple-600">{data.stats.commitsCount}</div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {selectedCommit && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Selected Commit</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div>
-                          <span className="font-medium">Message:</span> {selectedCommit.message}
-                        </div>
-                        <div>
-                          <span className="font-medium">Author:</span> {selectedCommit.author}
-                        </div>
-                        <div>
-                          <span className="font-medium">Date:</span> {new Date(selectedCommit.date).toLocaleString()}
-                        </div>
-                        <div>
-                          <span className="font-medium">Hash:</span> <code className="bg-muted px-2 py-1 rounded">{selectedCommit.hash}</code>
-                        </div>
+                    <CardContent className="p-2 lg:p-4">
+                      <div className="space-y-1">
+                        {renderFileTree(data.fileTree)}
                       </div>
                     </CardContent>
                   </Card>
-                )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="statistics" className="mt-0 h-full">
+                <div className="p-4 lg:p-6">
+                  <div className="mb-6">
+                    <h3 className="text-xl font-semibold mb-2">Repository Statistics</h3>
+                    <p className="text-muted-foreground">Quantitative analysis of repository changes</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-xs sm:text-sm font-medium">Lines Added</CardTitle>
+                        <Plus className="h-4 w-4 text-green-600" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-lg sm:text-2xl font-bold text-green-600">{data.stats.totalAdditions}</div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-xs sm:text-sm font-medium">Lines Removed</CardTitle>
+                        <Minus className="h-4 w-4 text-red-600" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-lg sm:text-2xl font-bold text-red-600">{data.stats.totalDeletions}</div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-xs sm:text-sm font-medium">Files Changed</CardTitle>
+                        <FileText className="h-4 w-4 text-blue-600" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-lg sm:text-2xl font-bold text-blue-600">{data.stats.filesChanged}</div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-xs sm:text-sm font-medium">Commits</CardTitle>
+                        <GitBranch className="h-4 w-4 text-purple-600" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-lg sm:text-2xl font-bold text-purple-600">{data.stats.commitsCount}</div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {selectedCommit && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Selected Commit</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div>
+                            <span className="font-medium text-sm">Message:</span>
+                            <p className="mt-1 break-words">{selectedCommit.message}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-sm">Author:</span>
+                            <p className="mt-1">{selectedCommit.author}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-sm">Date:</span>
+                            <p className="mt-1">{new Date(selectedCommit.date).toLocaleString()}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-sm">Hash:</span>
+                            <code className="block mt-1 bg-muted px-2 py-1 rounded text-sm break-all">{selectedCommit.hash}</code>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               </TabsContent>
             </div>
           </Tabs>
