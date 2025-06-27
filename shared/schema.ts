@@ -42,17 +42,22 @@ export const gitAnalysisSchema = z.object({
 
 export type GitAnalysisRequest = z.infer<typeof gitAnalysisSchema>;
 
-export const fileTreeNodeSchema: z.ZodType<FileTreeNode> = z.object({
+const baseFileTreeNodeSchema = z.object({
   name: z.string(),
   type: z.enum(["file", "folder"]),
   path: z.string(),
   status: z.enum(["added", "modified", "deleted", "unchanged"]).optional(),
-  children: z.lazy(() => fileTreeNodeSchema).array().optional(),
   additions: z.number().optional(),
   deletions: z.number().optional(),
 });
 
-export type FileTreeNode = z.infer<typeof fileTreeNodeSchema>;
+export const fileTreeNodeSchema: z.ZodType<any> = baseFileTreeNodeSchema.extend({
+  children: z.lazy(() => fileTreeNodeSchema.array()).optional(),
+});
+
+export type FileTreeNode = z.infer<typeof baseFileTreeNodeSchema> & {
+  children?: FileTreeNode[];
+};
 
 // Architecture diagram types
 export const architectureDiagramNodeSchema = z.object({
