@@ -85,11 +85,11 @@ export function AnimationViewer({ fromContent, toContent, progress, selectedFile
             <motion.div
               key={i}
               className={`flex ${isDifferent ? 'cursor-pointer' : ''}`}
-              style={{ backgroundColor: bgColor }}
               initial={{ opacity: 0, x: isAdded ? 20 : (isRemoved ? -20 : 0) }}
               animate={{ 
                 opacity: isAdded ? progress : (isRemoved ? 1 - progress : 1), 
-                x: 0 
+                x: 0,
+                backgroundColor: bgColor
               }}
               onClick={isDifferent ? handleLineClick : undefined}
             >

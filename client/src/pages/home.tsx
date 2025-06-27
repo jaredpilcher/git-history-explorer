@@ -28,9 +28,30 @@ export default function Home() {
       });
     },
     onError: (error: any) => {
+      let errorMessage = "Failed to analyze repository";
+      let errorTitle = "Analysis failed";
+      
+      // Handle different types of errors with specific messages
+      if (error.message?.includes("Authentication failed")) {
+        errorTitle = "Authentication Error";
+        errorMessage = "This repository requires authentication. Please make sure it's a public repository or you have access.";
+      } else if (error.message?.includes("Repository not found")) {
+        errorTitle = "Repository Not Found";
+        errorMessage = "The repository URL couldn't be found. Please check the URL and try again.";
+      } else if (error.message?.includes("timeout")) {
+        errorTitle = "Request Timeout";
+        errorMessage = "The repository is taking too long to analyze. It might be very large or the server is busy.";
+      } else if (error.message?.includes("Network error")) {
+        errorTitle = "Network Error";
+        errorMessage = "There was a problem connecting to the repository. Please check your internet connection.";
+      } else if (error.message?.includes("rate limit")) {
+        errorTitle = "Rate Limited";
+        errorMessage = "Too many requests. Please wait a moment before trying again.";
+      }
+      
       toast({
-        title: "Analysis failed",
-        description: error.message || "Failed to analyze repository",
+        title: errorTitle,
+        description: errorMessage,
         variant: "destructive",
       });
     },

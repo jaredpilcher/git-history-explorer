@@ -135,7 +135,11 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
       {/* Header */}
       <header className="flex items-center justify-between p-3 bg-background/70 backdrop-blur-sm border-b sticky top-0 left-0 right-0 h-16 z-30">
         <div className="flex items-center gap-3 overflow-hidden">
-          <button onClick={onReset} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+          <button 
+            onClick={onReset} 
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary rounded-md p-1"
+            aria-label={`Return to repository selection. Currently viewing ${repoUrl}`}
+          >
             <GitBranch className="text-primary h-6 w-6 flex-shrink-0" />
             <div className="flex flex-col">
               <h1 className="text-lg font-semibold truncate hover:underline">
@@ -143,8 +147,10 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
               </h1>
               {isLargeRepository && (
                 <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                  <AlertTriangle size={12} />
-                  <span className="text-xs">Showing first {maxCommitsToDisplay} commits for performance</span>
+                  <AlertTriangle size={12} aria-hidden="true" />
+                  <span className="text-xs" role="status" aria-live="polite">
+                    Showing first {maxCommitsToDisplay} commits for performance
+                  </span>
                 </div>
               )}
             </div>
