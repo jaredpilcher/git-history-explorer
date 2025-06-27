@@ -142,13 +142,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json(analysisResponse);
       } catch (gitError: any) {
         console.error('Git operation failed:', gitError);
-        const errorMessage = gitError.message?.includes('Authentication failed') || 
-                           gitError.message?.includes('could not read') ||
-                           gitError.message?.includes('not found')
-          ? 'Failed to clone repository. Please check the URL and ensure it is a public repository.'
-          : 'Failed to analyze repository. Please try again.';
         
-        res.status(400).json({ error: errorMessage });
+        let errorMessage = 'Failed to analyze repository. Please try again.';
+        let statusCode = 500;
+        
+        if (gitError.message?.includes('Authentication failed') || 
+            gitError.message?.includes('could not read Username') ||
+            gitError.message?.includes('repository access denied')) {
+          errorMessage = 'Authentication failed. Please check the URL and ensure it is a public repository or you have access.';
+          statusCode = 401;
+        } else if (gitError.message?.includes('not found') || 
+                   gitError.message?.includes('does not exist') ||
+                   gitError.message?.includes('Repository not found')) {
+          errorMessage = 'Repository not found. Please verify the URL is correct.';
+          statusCode = 404;
+        } else if (gitError.message?.includes('timeout') || 
+                   gitError.message?.includes('Connection timed out')) {
+          errorMessage = 'Repository clone timed out. The repository may be too large or the server is busy.';
+          statusCode = 408;
+        } else if (gitError.message?.includes('Network')) {
+          errorMessage = 'Network error occurred. Please check your internet connection and try again.';
+          statusCode = 503;
+        }
+        
+        res.status(statusCode).json({ 
+          error: errorMessage,
+          details: process.env.NODE_ENV === 'development' ? gitError.message : undefined
+        });
       } finally {
         // Clean up temporary directory
         if (tempDir!) {

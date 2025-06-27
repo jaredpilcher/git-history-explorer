@@ -137,9 +137,17 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
         <div className="flex items-center gap-3 overflow-hidden">
           <button onClick={onReset} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <GitBranch className="text-primary h-6 w-6 flex-shrink-0" />
-            <h1 className="text-lg font-semibold truncate hover:underline">
-              {repoUrl}
-            </h1>
+            <div className="flex flex-col">
+              <h1 className="text-lg font-semibold truncate hover:underline">
+                {repoUrl}
+              </h1>
+              {isLargeRepository && (
+                <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                  <AlertTriangle size={12} />
+                  <span className="text-xs">Showing first {maxCommitsToDisplay} commits for performance</span>
+                </div>
+              )}
+            </div>
           </button>
         </div>
         <div className="flex items-center gap-4">
@@ -166,7 +174,7 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
       {/* Commit Selector */}
       <div className="p-4 border-b">
         <CommitSelector 
-          commits={data.commits} 
+          commits={displayCommits} 
           fromCommit={fromCommit} 
           toCommit={toCommit} 
           onFromChange={setFromCommit} 
