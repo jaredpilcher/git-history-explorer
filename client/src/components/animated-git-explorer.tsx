@@ -50,8 +50,11 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
   // Mutation for fetching specific file content
   const fileContentMutation = useMutation({
     mutationFn: async ({ filePath, fromCommit, toCommit }: { filePath: string; fromCommit?: string; toCommit?: string }) => {
-      return await apiRequest(`/api/file-content`, {
+      const response = await fetch('/api/file-content', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           repoUrl,
           filePath,
@@ -59,8 +62,14 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
           toCommit
         })
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch file content');
+      }
+      
+      return await response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (data: { before: string; after: string }) => {
       setFileContent(data);
     }
   });
@@ -246,7 +255,7 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
           <div className="flex-1 h-64 md:h-1/2 overflow-y-auto">
             <FileTreeView 
               tree={currentFileTree} 
-              onFileSelect={setSelectedFile} 
+              onFileSelect={handleFileSelect} 
               selectedFile={selectedFile} 
             />
           </div>
@@ -261,8 +270,8 @@ export function AnimatedGitExplorer({ data, repoUrl, onReset }: AnimatedGitExplo
             {/* Animation Viewer */}
             <div className="flex-1 min-h-[50vh] lg:min-h-full">
               <AnimationViewer 
-                fromContent={data.fileContents.before} 
-                toContent={data.fileContents.after} 
+                fromContent={fileContent.before} 
+                toContent={fileContent.after} 
                 progress={animationProgress} 
                 selectedFile={selectedFile} 
                 commit={currentCommit}

@@ -162,6 +162,14 @@ Changelog:
   - Added performance monitoring indicators for large repositories with user-friendly warnings
   - Improved error categorization with specific handling for rate limiting, repository access, and network connectivity
   - Enhanced form validation with proper disabled states and user feedback
+- June 27, 2025. Major enhancement implementing comprehensive feedback improvements:
+  - **Enhanced Diff Visualization**: Integrated 'diff' library for proper line-by-line diffing with smooth fading animations
+  - **Changed Files Filter**: Added toggle button in file tree to show only changed files for better focus
+  - **Real-time File Content**: Implemented `/api/file-content` endpoint to fetch actual file contents between commits
+  - **Interactive File Selection**: Dynamic content loading when users select different files in the tree
+  - **Improved Animation System**: Enhanced progress-based fading for added/removed/modified lines
+  - **Better UX Patterns**: Hover effects, loading states, and smooth transitions throughout the interface
+  - **Performance Optimizations**: Smart file filtering and efficient content loading for large repositories
 
 ## User Preferences
 
