@@ -1,14 +1,17 @@
-export const mockFileTreeHistory = [
-    { name: "root", type: "folder", children: [ { name: "package.json", type: "file", status: "modified" }, { name: "src", type: "folder", children: [{ name: "App.tsx", type: "file", status: "added" }] }] },
-    { name: "root", type: "folder", children: [ { name: "package.json", type: "file", status: "equal" }, { name: "src", type: "folder", children: [{ name: "App.tsx", type: "file", status: "modified" }, { name: "parser.ts", type: "file", status: "added" }] }] },
-    { name: "root", type: "folder", children: [ { name: "package.json", type: "file", status: "modified" }, { name: "src", type: "folder", children: [{ name: "App.tsx", type: "file", status: "modified" }, { name: "parser.ts", type: "file", status: "equal" }, { name: "store.ts", type: "file", status: "added" }] }] },
-    { name: "root", type: "folder", children: [ { name: "README.md", type: "file", status: "added" }, { name: "package.json", type: "file", status: "equal" }, { name: "src", type: "folder", children: [{ name: "App.tsx", type: "file", status: "equal" }, { name: "parser.ts", type: "file", status: "equal" }, { name: "store.ts", type: "file", status: "equal" }] }] },
-    { name: "root", type: "folder", children: [ { name: "README.md", type: "file", status: "equal" }, { name: "package.json", type: "file", status: "equal" }, { name: "src", type: "folder", children: [{ name: "App.tsx", type: "file", status: "modified" }, { name: "parser.ts", type: "file", status: "equal" }, { name: "store.ts", type: "file", status: "equal" }, { name: "theme.ts", type: "file", status: "added" }] }] },
-    { name: "root", type: "folder", children: [ { name: ".github", type: "folder", children: [{ name: "workflows", type: "folder", children: [{ name: "ci.yml", type: "file", status: "added" }] }] }, { name: "README.md", type: "file", status: "equal" }, { name: "package.json", type: "file", status: "equal" }, { name: "src", type: "folder", children: [{ name: "App.tsx", type: "file", status: "equal" }, { name: "parser.ts", type: "file", status: "equal" }, { name: "store.ts", type: "file", status: "equal" }, { name: "theme.ts", type: "file", status: "equal" }] }] },
-    { name: "root", type: "folder", children: [ { name: ".github", type: "folder", children: [{ name: "workflows", type: "folder", children: [{ name: "ci.yml", type: "file", status: "equal" }] }] }, { name: "README.md", type: "file", status: "equal" }, { name: "package.json", type: "file", status: "equal" }, { name: "src", type: "folder", children: [{ name: "App.tsx", type: "file", status: "equal" }, { name: "parser.ts", type: "file", status: "equal" }, { name: "store.ts", type: "file", status: "equal" }, { name: "theme.ts", type: "file", status: "equal" }, { name: "api.ts", type: "file", status: "added" }] }] },
+import type { FileTreeNode, ArchitectureDiagram } from "@shared/schema";
+
+// Simplified mock data for demonstration
+export const mockFileTreeHistory: any[] = [
+    { name: "root", type: "folder", path: "/", children: [] },
+    { name: "root", type: "folder", path: "/", children: [] },
+    { name: "root", type: "folder", path: "/", children: [] },
+    { name: "root", type: "folder", path: "/", children: [] },
+    { name: "root", type: "folder", path: "/", children: [] },
+    { name: "root", type: "folder", path: "/", children: [] },
+    { name: "root", type: "folder", path: "/", children: [] },
 ];
 
-export const mockArchitectureNotes = [
+export const mockArchitectureNotes: string[] = [
     "**Initial Scaffolding:** This commit establishes the foundational architecture. The diagram shows a single component, **`App.tsx`**, which serves as the root of the application and initially contains all UI and logic.",
     "**Decoupling with a Service Module:** The introduction of **`parser.ts`** marks the first major architectural improvement. As shown in the diagram, a new link is formed from **`App.tsx`**, which now offloads complex diff-parsing logic to this dedicated service module. This improves modularity and testability.",
     "**Centralized State Management:** Adding **`store.ts`** signifies a shift to a more robust state pattern. A new **`Store`** node appears in the diagram, and **`App.tsx`** now connects to it, centralizing data flow and making the architecture more scalable by creating a single source of truth.",
@@ -18,7 +21,7 @@ export const mockArchitectureNotes = [
     "**Implementing a Dedicated API Layer:** The creation of **`api.ts`** establishes a formal API abstraction. The new **`API`** node is now connected to **`App.tsx`**, which delegates all network communication to this layer. This decouples the UI from the specifics of data fetching.",
 ];
 
-export const mockArchitectureDiagrams = [
+export const mockArchitectureDiagrams: ArchitectureDiagram[] = [
     { nodes: [{ id: 'App', label: 'App.tsx', x: 250, y: 150 }], links: [] },
     { nodes: [{ id: 'App', label: 'App.tsx', x: 250, y: 80 }, { id: 'Parser', label: 'parser.ts', x: 250, y: 220 }], links: [{ source: 'App', target: 'Parser' }] },
     { nodes: [{ id: 'App', label: 'App.tsx', x: 150, y: 150 }, { id: 'Parser', label: 'parser.ts', x: 350, y: 80 }, { id: 'Store', label: 'store.ts', x: 350, y: 220 }], links: [{ source: 'App', target: 'Parser' }, { source: 'App', target: 'Store' }] },
